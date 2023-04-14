@@ -6,12 +6,17 @@
 # List ports:
 #   python -m serial.tools.list_ports
 
+import Adafruit_BBIO.GPIO as GPIO
 import serial # the pyserial
 from serial.tools.list_ports import comports
 from time import sleep
 
 class hardwareInterface():
     def findSerialPort(self):
+        GPIO.setup("P8_16", GPIO.OUT) #output for port relays
+        GPIO.setup("P8_18", GPIO.OUT) #output for CP
+        self.isInterfaceOk = True
+        return
         ports = []
         self.addToTrace('Available serial ports:')
         for n, (port, desc, hwid) in enumerate(sorted(comports()), 1):
@@ -39,18 +44,22 @@ class hardwareInterface():
 
     def setStateB(self):
         self.addToTrace("Setting CP line into state B.")
+        GPIO.output("P8_18", GPIO.LOW)
         self.outvalue &= ~1
         
     def setStateC(self):
         self.addToTrace("Setting CP line into state C.")
+        GPIO.output("P8_18", GPIO.HIGH)
         self.outvalue |= 1
         
     def setPowerRelayOn(self):
         self.addToTrace("Switching PowerRelay ON.")
+        GPIO.output("P8_16", GPIO.HIGH)
         self.outvalue |= 2
 
     def setPowerRelayOff(self):
         self.addToTrace("Switching PowerRelay OFF.")
+        GPIO.output("P8_16", GPIO.LOW)
         self.outvalue &= ~2
 
     def setRelay2On(self):
@@ -131,6 +140,7 @@ class hardwareInterface():
                 self.rxbuffer = self.rxbuffer[x+3:] # consume the receive buffer entry
 
     def showOnDisplay(self, s1, s2, s3):
+        return
         # show the given string s on the display which is connected to the serial port
         s = "lc" + s1 + "\n" + "lc" + s2 + "\n" + "lc" + s3 + "\n"
         self.ser.write(bytes(s, "utf-8"))
@@ -148,14 +158,15 @@ class hardwareInterface():
                 self.loopcounter=0
                 # self.ser.write(b'hello world\n')
                 s = "000" + str(self.outvalue)
-                self.ser.write(bytes("do"+s+"\n", "utf-8")) # set outputs of dieter, see https://github.com/uhi22/dieter
-            s = self.ser.read(100)
+                #self.ser.write(bytes("do"+s+"\n", "utf-8")) # set outputs of dieter, see https://github.com/uhi22/dieter
+            #s = self.ser.read(100)
+            s = bytes("A0=0330", 'utf-8') #about 230V
             if (len(s)>0):
                 try:
                     s = str(s, 'utf-8').strip()
                 except:
                     s = "" # for the case we received corrupted data (not convertable as utf-8)
-                self.addToTrace(str(len(s)) + " bytes received: " + s)
+                #self.addToTrace(str(len(s)) + " bytes received: " + s)
                 self.evaluateReceivedData(s)
         
 def myPrintfunction(s):
